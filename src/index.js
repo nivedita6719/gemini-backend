@@ -35,6 +35,13 @@ app.use('/api', paymentRoutes); // <-- this must come AFTER app is defined
 app.get('/', (req, res) => {
   res.send('✅ Gemini backend API running');
 });
+// At the very bottom of src/index.js
+
+if (process.env.START_WORKER === 'true') {
+  require('./worker');
+  console.log('✅ Worker started from index.js');
+}
+
 
 // Start server
 const PORT = process.env.PORT || 3000;
