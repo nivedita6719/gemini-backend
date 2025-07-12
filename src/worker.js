@@ -6,7 +6,8 @@ const IORedis = require('ioredis');
 
 const connection = new IORedis(process.env.REDIS_URL, {
   tls: true,
-  rejectUnauthorized: false
+  rejectUnauthorized: false,
+  maxRetriesPerRequest: null, // ✅ Required by BullMQ
 });
 
 const worker = new Worker(
