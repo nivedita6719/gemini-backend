@@ -1,24 +1,30 @@
-// worker.js
-const Queue = require('./config/queue'); // adjust if queue is in a different path
-const { callGeminiAPI } = require('./utils/gemini'); // your Gemini API helper
 
-Queue.process(async (job) => {
-  const { prompt, chatroomId, userId } = job.data;
+const { Worker } = require('bullmq');
+require('dotenv').config();
+const { callGeminiAPI } = require('./utils/gemini');
+const IORedis = require('ioredis');
 
-  try {
-    const geminiResponse = await callGeminiAPI(prompt);
-    console.log('✅ Gemini response processed:', geminiResponse);
-    return geminiResponse;
-  } catch (error) {
-    console.error('❌ Failed to process job:', error);
-    throw error;
-  }
+const connection = new IORedis(process.env.REDIS_URL, {
+  tls: true,
+  rejectUnauthorized: false
 });
 
-Queue.on('completed', (job, result) => {
-  console.log(`✅ Job completed:`, job.id, '→ Result:', result);
+const worker = new Worker(
+  'gemini-message-queue',
+  async (job) => {
+    const { prompt, chatroomId, userId } = job.data;
+
+    const response = await callGeminiAPI(prompt);
+    console.log('✅ Gemini API response:', response);
+    return response;
+  },
+  { connection }
+);
+
+worker.on('completed', (job, result) => {
+  console.log(`✅ Job completed: ${job.id}`, result);
 });
 
-Queue.on('failed', (job, err) => {
-  console.error(`❌ Job failed:`, job.id, '→', err);
+worker.on('failed', (job, err) => {
+  console.error(`❌ Job failed: ${job.id}`, err);
 });
